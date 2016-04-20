@@ -67,11 +67,8 @@ namespace Merchello.Tests.AuthorizeNet.Integration.TestHelpers
             GatewayProviderSettings =
                 GatewayProviderService.GetGatewayProviderByKey(new Guid("C6BF6743-3565-401F-911A-33B68CACB11B"));
 
-            var providerSettings = new AuthorizeNetProcessorSettings()
-            {
-                LoginId = xLogin,
-                TransactionKey = xtrankey
-            };
+            var providerSettings = new AuthorizeNetProcessorSettings();
+	        providerSettings.Accounts.Add(new AuthorizeNetAccountSettings { LoginId = xLogin, TransactionKey = xtrankey });
 
             GatewayProviderSettings.ExtendedData.SaveProcessorSettings(providerSettings);
 

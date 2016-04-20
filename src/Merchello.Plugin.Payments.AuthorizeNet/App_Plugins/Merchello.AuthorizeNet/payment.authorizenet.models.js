@@ -1,16 +1,9 @@
 ﻿(function () {
-    
+
     var authorizeNetProcessorSettings = function () {
-        var self = this;
-        self.LoginId = '';
-        self.TransactionKey = '';
-        self.Method = '';
-        self.DelimitedData = '';
-        self.DelimitedChar = '';
-        self.EncapChar = '';
-        self.RelayResponse = '';
+    	var self = this;
+	    self.Accounts = [];
         self.ApiVersion = '';
-        self.UseSandbox = '';
     };
 
     angular.module('merchello.plugins.authorizenet').constant('AuthorizeNetProcessorSettings', authorizeNetProcessorSettings);

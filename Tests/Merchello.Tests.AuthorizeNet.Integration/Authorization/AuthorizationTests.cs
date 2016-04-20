@@ -57,12 +57,14 @@ namespace Merchello.Tests.AuthorizeNet.Integration.Authorization
             _invoice.Items.Add(l3);
             _invoice.Items.Add(l4);
 
-            var processorSettings = new AuthorizeNetProcessorSettings
-            {
-                LoginId = ConfigurationManager.AppSettings["xlogin"],
-                TransactionKey = ConfigurationManager.AppSettings["xtrankey"],
-                UseSandbox = true
-            };
+	        var processorSettings = new AuthorizeNetProcessorSettings();
+			processorSettings.Accounts.Add(new AuthorizeNetAccountSettings
+			{
+				LoginId = ConfigurationManager.AppSettings["xlogin"],
+				TransactionKey = ConfigurationManager.AppSettings["xtrankey"],
+				UseSandbox = true
+			});
+           
 
             Provider.GatewayProviderSettings.ExtendedData.SaveProcessorSettings(processorSettings);
 

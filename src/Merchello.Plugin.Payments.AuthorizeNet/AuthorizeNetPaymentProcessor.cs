@@ -17,23 +17,34 @@ namespace Merchello.Plugin.Payments.AuthorizeNet
     /// </summary>
     public class AuthorizeNetPaymentProcessor
     {
-        private readonly AuthorizeNetProcessorSettings _settings;
+	    private readonly AuthorizeNetProcessorSettings _settings;
+	    private readonly AuthorizeNetAccountSettings _accountSettings;
 
         public AuthorizeNetPaymentProcessor(AuthorizeNetProcessorSettings settings)
         {
-            _settings = settings;
-        }
+	        _settings = settings;
+			// Default to the first account as this will be used by most and we don't yet know the curerncy
+			// for the transaction to be able to select any other
+			_accountSettings = settings.Accounts.FirstOrDefault();
+		}
 
-        /// <summary>
-        /// Processes the Authorize and AuthorizeAndCapture transactions
-        /// </summary>
-        /// <param name="invoice">The <see cref="IInvoice"/> to be paid</param>
-        /// <param name="payment">The <see cref="IPayment"/> record</param>
-        /// <param name="transactionMode">Authorize or AuthorizeAndCapture</param>
-        /// <param name="amount">The money amount to be processed</param>
-        /// <param name="creditCard">The <see cref="CreditCardFormData"/></param>
-        /// <returns>The <see cref="IPaymentResult"/></returns>
-        public IPaymentResult ProcessPayment(IInvoice invoice, IPayment payment, TransactionMode transactionMode, decimal amount, CreditCardFormData creditCard)
+	    public AuthorizeNetPaymentProcessor(AuthorizeNetProcessorSettings settings, string currencyCode)
+	    {
+			// Select the account that should handle this currency or default to the first
+			_accountSettings = settings.Accounts.FirstOrDefault(x => x.CurrencyCode == currencyCode)
+			                   ?? settings.Accounts.FirstOrDefault();
+	    }
+
+		/// <summary>
+		/// Processes the Authorize and AuthorizeAndCapture transactions
+		/// </summary>
+		/// <param name="invoice">The <see cref="IInvoice"/> to be paid</param>
+		/// <param name="payment">The <see cref="IPayment"/> record</param>
+		/// <param name="transactionMode">Authorize or AuthorizeAndCapture</param>
+		/// <param name="amount">The money amount to be processed</param>
+		/// <param name="creditCard">The <see cref="CreditCardFormData"/></param>
+		/// <returns>The <see cref="IPaymentResult"/></returns>
+		public IPaymentResult ProcessPayment(IInvoice invoice, IPayment payment, TransactionMode transactionMode, decimal amount, CreditCardFormData creditCard)
         {
             var address = invoice.GetBillingAddress();
             
@@ -259,16 +270,19 @@ namespace Merchello.Plugin.Payments.AuthorizeNet
 
         private NameValueCollection GetInitialRequestForm(string currencyCode)
         {
+			// Get the account settings for the account configured to handle this currency
+			_accountSettings = this._settings.Accounts.FirstOrDefault(x => x.CurrencyCode == currencyCode);
+
             return new NameValueCollection()
             {
-                { "x_login", _settings.LoginId },
-                { "x_tran_key", _settings.TransactionKey },
-                { "x_delim_data", _settings.DelimitedData.ToString().ToUpperInvariant() },
-                { "x_delim_char", _settings.DelimitedChar },
-                { "x_encap_char", _settings.EncapChar },
-                { "x_version", _settings.ApiVersion },
-                { "x_relay_response", _settings.RelayResponse.ToString().ToUpperInvariant() },
-                { "x_method", _settings.Method },
+                { "x_login", _accountSettings.LoginId },
+                { "x_tran_key", _accountSettings.TransactionKey },
+                { "x_delim_data", _accountSettings.DelimitedData.ToString().ToUpperInvariant() },
+                { "x_delim_char", _accountSettings.DelimitedChar },
+                { "x_encap_char", _accountSettings.EncapChar },
+                { "x_version", this._settings.ApiVersion },
+                { "x_relay_response", _accountSettings.RelayResponse.ToString().ToUpperInvariant() },
+                { "x_method", _accountSettings.Method },
                 { "x_currency_code", currencyCode }
             };
         }
@@ -278,7 +292,7 @@ namespace Merchello.Plugin.Payments.AuthorizeNet
         /// </summary>
         private string GetAuthorizeNetUrl()
         {
-            return _settings.UseSandbox
+            return _accountSettings.UseSandbox
                 ? "https://test.authorize.net/gateway/transact.dll"
                 : "https://secure.authorize.net/gateway/transact.dll";
         }

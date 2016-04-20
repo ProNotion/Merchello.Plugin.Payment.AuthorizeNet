@@ -32,7 +32,7 @@ namespace Merchello.Tests.AuthorizeNet.Integration.GatewayProvider
             var xtrankey = ConfigurationManager.AppSettings["xtrankey"];
 
             //// Act
-            var settings = Provider.GatewayProviderSettings.ExtendedData.GetProcessorSettings();
+            var settings = Provider.GatewayProviderSettings.ExtendedData.GetProcessorSettings().Accounts.FirstOrDefault();
 
             //// Assert
             Assert.NotNull(settings);

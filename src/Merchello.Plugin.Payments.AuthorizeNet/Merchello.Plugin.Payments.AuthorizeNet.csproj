@@ -282,6 +282,7 @@
     <Compile Include="AuthorizeNetPaymentProcessor.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="ExtendedDataExtensions.cs" />
+    <Compile Include="Models\AuthorizeNetAccountSettings.cs" />
     <Compile Include="Models\AuthorizeNetProcessorSettings.cs" />
     <Compile Include="Models\CreditCardInfoExtensions.cs" />
     <Compile Include="Models\CreditCardFormData.cs" />

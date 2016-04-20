@@ -18,22 +18,13 @@ namespace Merchello.Plugin.Payments.AuthorizeNet
     public class AuthorizeNetPaymentProcessor
     {
 	    private readonly AuthorizeNetProcessorSettings _settings;
-	    private readonly AuthorizeNetAccountSettings _accountSettings;
 
         public AuthorizeNetPaymentProcessor(AuthorizeNetProcessorSettings settings)
         {
 	        _settings = settings;
 			// Default to the first account as this will be used by most and we don't yet know the curerncy
 			// for the transaction to be able to select any other
-			_accountSettings = settings.Accounts.FirstOrDefault();
 		}
-
-	    public AuthorizeNetPaymentProcessor(AuthorizeNetProcessorSettings settings, string currencyCode)
-	    {
-			// Select the account that should handle this currency or default to the first
-			_accountSettings = settings.Accounts.FirstOrDefault(x => x.CurrencyCode == currencyCode)
-			                   ?? settings.Accounts.FirstOrDefault();
-	    }
 
 		/// <summary>
 		/// Processes the Authorize and AuthorizeAndCapture transactions
@@ -200,8 +191,8 @@ namespace Merchello.Plugin.Payments.AuthorizeNet
 
         public IPaymentResult VoidPayment(IInvoice invoice, IPayment payment)
         {
-            // assert last 4 digits of cc is present
-            var cc4 = payment.ExtendedData.GetValue(Constants.ExtendedDataKeys.CcLastFour);
+			// assert last 4 digits of cc is present
+			var cc4 = payment.ExtendedData.GetValue(Constants.ExtendedDataKeys.CcLastFour);
             if(string.IsNullOrEmpty(cc4)) return new PaymentResult(Attempt<IPayment>.Fail(payment, new InvalidOperationException("The last four digits of the credit card are not available")), invoice, false);
 
             // assert the transaction code is present
@@ -243,8 +234,8 @@ namespace Merchello.Plugin.Payments.AuthorizeNet
             try
             {
                 var postData = form.AllKeys.Aggregate("", (current, key) => current + (key + "=" + HttpUtility.UrlEncode(form[key]) + "&")).TrimEnd('&');
-
-                var request = (HttpWebRequest)WebRequest.Create(GetAuthorizeNetUrl());
+	            var account = GetAccountForCurrency(form["x_currency_code"]);
+                var request = (HttpWebRequest)WebRequest.Create(GetAuthorizeNetUrl(account));
                 request.Method = "POST";
                 request.ContentLength = postData.Length;
                 request.ContentType = "application/x-www-form-urlencoded";
@@ -271,18 +262,18 @@ namespace Merchello.Plugin.Payments.AuthorizeNet
         private NameValueCollection GetInitialRequestForm(string currencyCode)
         {
 			// Get the account settings for the account configured to handle this currency
-			_accountSettings = this._settings.Accounts.FirstOrDefault(x => x.CurrencyCode == currencyCode);
+			var account = GetAccountForCurrency(currencyCode);
 
             return new NameValueCollection()
             {
-                { "x_login", _accountSettings.LoginId },
-                { "x_tran_key", _accountSettings.TransactionKey },
-                { "x_delim_data", _accountSettings.DelimitedData.ToString().ToUpperInvariant() },
-                { "x_delim_char", _accountSettings.DelimitedChar },
-                { "x_encap_char", _accountSettings.EncapChar },
+                { "x_login", account.LoginId },
+                { "x_tran_key", account.TransactionKey },
+                { "x_delim_data", account.DelimitedData.ToString().ToUpperInvariant() },
+                { "x_delim_char", account.DelimitedChar },
+                { "x_encap_char", account.EncapChar },
                 { "x_version", this._settings.ApiVersion },
-                { "x_relay_response", _accountSettings.RelayResponse.ToString().ToUpperInvariant() },
-                { "x_method", _accountSettings.Method },
+                { "x_relay_response", account.RelayResponse.ToString().ToUpperInvariant() },
+                { "x_method", account.Method },
                 { "x_currency_code", currencyCode }
             };
         }
@@ -290,9 +281,9 @@ namespace Merchello.Plugin.Payments.AuthorizeNet
         /// <summary>
         /// Gets the Authorize.Net Url
         /// </summary>
-        private string GetAuthorizeNetUrl()
+        private string GetAuthorizeNetUrl(AuthorizeNetAccountSettings account)
         {
-            return _accountSettings.UseSandbox
+            return account.UseSandbox
                 ? "https://test.authorize.net/gateway/transact.dll"
                 : "https://secure.authorize.net/gateway/transact.dll";
         }
@@ -306,5 +297,11 @@ namespace Merchello.Plugin.Payments.AuthorizeNet
         {
             get { return "3.1"; }
         }
+
+	    private AuthorizeNetAccountSettings GetAccountForCurrency(string currencyCode)
+	    {
+		    return _settings.Accounts.FirstOrDefault(x => x.CurrencyCode == currencyCode)
+		           ?? _settings.Accounts.FirstOrDefault();
+	    }
     }
 }
